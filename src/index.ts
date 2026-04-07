@@ -1,30 +1,63 @@
-interface individual {
-    x1: number,
-    x2: number,
-    fitness: number
+import { AG1 } from './algorithms/ag1';
+import { AG2 } from './algorithms/ag2';
+import { calcFitnessBf1, calcFitnessCb3 } from './problems/optimization';
+import { GAConfig } from './algorithms/GeneticAlgorithm';
+
+const NUM_REPETICOES = 100;
+
+function testarAlgoritmo(nomeDoTeste: string, AlgoritmoClass: any, config: GAConfig) {
+    let totalNfe = 0;
+    let sucessos = 0;
+
+    console.log(`\nIniciando testes para: ${nomeDoTeste}...`);
+
+    for (let i = 0; i < NUM_REPETICOES; i++) {
+        const ag = new AlgoritmoClass(config);
+        
+        const resultado = ag.run();
+
+        totalNfe += resultado.nfe;
+        
+        if (resultado.success) {
+            sucessos++;
+        }
+    }
+
+    const mediaNfe = totalNfe / NUM_REPETICOES;
+    const sr = (sucessos / NUM_REPETICOES) * 100; 
+
+    console.log(`--- Resultados: ${nomeDoTeste} ---`);
+    console.log(`NFE (Média): ${mediaNfe.toFixed(0)}`);
+    console.log(`SR (Taxa de Sucesso): ${sr}%`);
+    console.log(`-------------------------------------------------`);
 }
 
-// 1. Bohachevsky 1 (BF1)
-function calcFitnessBf1 (x1: number, x2: number) {
-    const term1 = Math.pow(x1, 2);
-    const term2 = 2 * Math.pow(x2, 2);
-    const term3 = 0.3 * Math.cos(3 * Math.PI * x1);
-    const term4 = 0.4 * Math.cos(4 * Math.PI * x2);
+const configBf1: GAConfig = {
+    populationSize: 100,
+    maxGenerations: 1000,
+    mutationRate: 0.1,
+    crossoverRate: 0.9,
+    bounds: { min: -50, max: 50 }, 
+    fitnessFunction: calcFitnessBf1
+};
 
-    return term1 + term2 - term3 - term4 + 0.7;
-}
 
-// 2. Camel Back - 3 Three Hump (CB3)
-function calcFitnessCb3 (x1: number, x2: number) {
-    const term1 = 2 * Math.pow(x1, 2);
-    const term2 = 1.05 * Math.pow(x1, 4); 
-    const term3 = (1 / 6) * Math.pow(x1, 6);
-    const term4 = x1 * x2;
-    const term5 = Math.pow(x2, 2);
+const configCb3: GAConfig = {
+    populationSize: 100,
+    maxGenerations: 1000,
+    mutationRate: 0.1,
+    crossoverRate: 0.9,
+    bounds: { min: -5, max: 5 },
+    fitnessFunction: calcFitnessCb3
+};
 
-    return term1 - term2 + term3 + term4 + term5;
-}
 
-function generateRandomNumber (min: number, max: number) {
-    return Math.random() * (max - min) + min;
-}
+console.log("=================================================");
+console.log("   INICIANDO EXPERIMENTOS - PROJETO AG GEDA      ");
+console.log("=================================================");
+
+testarAlgoritmo("BF1 - Método AG1 (Mutação Total)", AG1, configBf1);
+testarAlgoritmo("BF1 - Método AG2 (Mutação Perturbação)", AG2, configBf1);
+
+testarAlgoritmo("CB3 - Método AG1 (Mutação Total)", AG1, configCb3);
+testarAlgoritmo("CB3 - Método AG2 (Mutação Perturbação)", AG2, configCb3);
