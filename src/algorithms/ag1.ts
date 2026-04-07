@@ -1,12 +1,18 @@
 import { GeneticAlgorithm, GAConfig } from './GeneticAlgorithm';
 
+export interface GAResult {
+    bestFitness: number;
+    nfe: number;
+    success: boolean;
+}
+
 export class AG1 extends GeneticAlgorithm {
     
     constructor(config: GAConfig) {
         super(config);
     }
 
-    public run(): { bestFitness: number, nfe: number, success: boolean } {
+    public run(): GAResult {
         this.initializePopulation();
         this.evaluatePopulation();
         
@@ -33,7 +39,6 @@ export class AG1 extends GeneticAlgorithm {
         }
 
         const bestResult = this.getBestIndividual().fitness;
-        
         const success = Math.abs(bestResult - 0) < 0.01;
 
         return { bestFitness: bestResult, nfe, success };

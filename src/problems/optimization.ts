@@ -1,5 +1,5 @@
 // 1. Bohachevsky 1 (BF1)
-export function calcFitnessBf1 (x1: number, x2: number) {
+export function calcFitnessBf1 (x1: number, x2: number): number {
     const term1 = Math.pow(x1, 2);
     const term2 = 2 * Math.pow(x2, 2);
     const term3 = 0.3 * Math.cos(3 * Math.PI * x1);
@@ -9,7 +9,7 @@ export function calcFitnessBf1 (x1: number, x2: number) {
 }
 
 // 2. Camel Back - 3 Three Hump (CB3)
-export function calcFitnessCb3 (x1: number, x2: number) {
+export function calcFitnessCb3 (x1: number, x2: number): number {
     const term1 = 2 * Math.pow(x1, 2);
     const term2 = 1.05 * Math.pow(x1, 4); 
     const term3 = (1 / 6) * Math.pow(x1, 6);

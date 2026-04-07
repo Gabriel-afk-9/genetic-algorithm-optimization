@@ -1,38 +1,38 @@
 import { Individual } from "../models/Individual";
 import { generateRandomNumber } from "../utils/math";
 
-type FitnessFunction = (x1: number, x2: number) => number;
+export type FitnessFunction = (x1: number, x2: number) => number;
 
 export interface GAConfig {
-    populationSize: number;
-    maxGenerations: number;
-    mutationRate: number;
-    crossoverRate: number;
-    bounds: {
-        min: number;
-        max: number
-    },
-    fitnessFunction: FitnessFunction; 
+    readonly populationSize: number;
+    readonly maxGenerations: number;
+    readonly mutationRate: number;
+    readonly crossoverRate: number;
+    readonly crossoverAlpha: number;
+    readonly tournamentSize: number;
+    readonly perturbationSize?: number;
+    readonly bounds: {
+        readonly min: number;
+        readonly max: number;
+    };
+    readonly fitnessFunction: FitnessFunction; 
 }
 
 export class GeneticAlgorithm {
-    protected config: GAConfig;
+    protected readonly config: GAConfig;
     private population: Individual[] = [];
 
     constructor(config: GAConfig) {
         this.config = config;
     }
+
     public initializePopulation(): void {
         this.population = [];
         for (let i = 0; i < this.config.populationSize; i++) {
             const x1 = generateRandomNumber(this.config.bounds.min, this.config.bounds.max);
             const x2 = generateRandomNumber(this.config.bounds.min, this.config.bounds.max);
             
-            this.population.push({
-                x1,
-                x2,
-                fitness: 0
-            });
+            this.population.push({ x1, x2, fitness: 0 });
         }
     }
 
@@ -48,10 +48,12 @@ export class GeneticAlgorithm {
         });
     }
 
-    private tournamentSelection(tournamentSize: number = 3): Individual {
+    protected tournamentSelection(): Individual {
         let bestContender: Individual | null = null;
+        
+        const size = this.config.tournamentSize || 3;
 
-        for (let i = 0; i < tournamentSize; i++) {
+        for (let i = 0; i < size; i++) {
             const randomIndex = Math.floor(Math.random() * this.population.length);
             const contender = this.population[randomIndex];
 
@@ -63,12 +65,12 @@ export class GeneticAlgorithm {
         return { ...bestContender! }; 
     }
 
-    private crossover(parent1: Individual, parent2: Individual): [Individual, Individual] {
+    protected crossover(parent1: Individual, parent2: Individual): [Individual, Individual] {
         if (Math.random() > this.config.crossoverRate) {
             return [{ ...parent1 }, { ...parent2 }];
         }
 
-        const alpha = 0.8;
+        const alpha = this.config.crossoverAlpha;
 
         const child1: Individual = {
             x1: (parent1.x1 * alpha) + (parent2.x1 * (1 - alpha)),
@@ -97,21 +99,18 @@ export class GeneticAlgorithm {
 
     public evolve(): void {
         const newPopulation: Individual[] = [];
-
         const bestCurrent = this.getBestIndividual();
         newPopulation.push({ ...bestCurrent }); 
 
         while (newPopulation.length < this.config.populationSize) {
             const p1 = this.tournamentSelection();
             const p2 = this.tournamentSelection();
-
             const [child1, child2] = this.crossover(p1, p2);
 
             this.mutate(child1);
             this.mutate(child2);
 
             newPopulation.push(child1);
-            
             if (newPopulation.length < this.config.populationSize) {
                 newPopulation.push(child2);
             }
