@@ -1,64 +1,40 @@
-import { AG1 } from './algorithms/AG1';
-import { AG2 } from './algorithms/AG2';
-import { calcFitnessBf1, calcFitnessCb3 } from './problems/optimization';
-import { GAConfig } from './algorithms/GeneticAlgorithm';
+import { GAConfig } from "./domain/GAConfig";
+import { Bohachevsky1 } from "./infrastructure/problems/Bohachevsky1";
+import { CamelBack3 } from "./infrastructure/problems/CamelBack3";
+import { RunOptimization } from "./usecases/RunOptimization";
 
-const NUM_REPETICOES = 100;
+function main() {
+    const runOptimization = new RunOptimization();
 
-type AGConstructor = new (config: GAConfig) => AG1;
+    const bf1Problem = new Bohachevsky1();
+    const cb3Problem = new CamelBack3();
 
-function testarAlgoritmo(nomeDoTeste: string, AlgoritmoClass: AGConstructor, config: GAConfig): void {
-    let totalNfe = 0;
-    let sucessos = 0;
+    const configBf1: GAConfig = {
+        populationSize: 100,      // Tamanho da população
+        maxGenerations: 1000,     // Limite máximo de gerações
+        mutationRate: 0.07,       // Taxa de mutação
+        crossoverRate: 0.95,      // Taxa de cruzamento
+        crossoverAlpha: 0.68,     // Carga genética do melhor pai
+        tournamentSize: 5,        // Quantos lutam no torneio
+        maxRepetitions: 5         // Critério de parada
+    };
 
-    console.log(`\n${nomeDoTeste}`);
+    const configCb3: GAConfig = { 
+        populationSize: 100,
+        maxGenerations: 1000,
+        mutationRate: 0.1,
+        crossoverRate: 0.9,
+        crossoverAlpha: 0.8,
+        tournamentSize: 3,
+        maxRepetitions: 5
+        // ...configBf1
+    }; 
 
-    for (let i = 0; i < NUM_REPETICOES; i++) {
-        const ag = new AlgoritmoClass(config);
-        const resultado = ag.run();
+    const resultBf1 = runOptimization.execute(bf1Problem, configBf1);
+    const resultCb3 = runOptimization.execute(cb3Problem, configCb3);
 
-        totalNfe += resultado.nfe;
-        
-        if (resultado.success) {
-            sucessos++;
-        }
-    }
-
-    const mediaNfe = totalNfe / NUM_REPETICOES;
-    const sr = (sucessos / NUM_REPETICOES) * 100; 
-
-    console.log(`--- Resultados: ${nomeDoTeste} ---`);
-    console.log(`NFE (Média): ${mediaNfe.toFixed(0)}`);
-    console.log(`SR (Taxa de Sucesso): ${sr}%`);
-    console.log(`-------------------------------------------------`);
+    console.log(resultBf1);
+    console.log(resultCb3);
 }
 
-const configBf1: GAConfig = {
-    populationSize: 100,
-    maxGenerations: 1000,
-    mutationRate: 0.1,
-    crossoverRate: 0.9,
-    crossoverAlpha: 0.8,
-    tournamentSize: 3,
-    perturbationSize: 0.5,
-    bounds: { min: -50, max: 50 }, 
-    fitnessFunction: calcFitnessBf1
-};
-
-const configCb3: GAConfig = {
-    populationSize: 100,
-    maxGenerations: 1000,
-    mutationRate: 0.1,
-    crossoverRate: 0.9,
-    crossoverAlpha: 0.8,
-    tournamentSize: 3,
-    perturbationSize: 0.5,
-    bounds: { min: -5, max: 5 },
-    fitnessFunction: calcFitnessCb3
-};
-
-testarAlgoritmo("BF1 - Método AG1 (Mutação Total)", AG1, configBf1);
-testarAlgoritmo("BF1 - Método AG2 (Mutação Perturbação)", AG2, configBf1);
-
-testarAlgoritmo("CB3 - Método AG1 (Mutação Total)", AG1, configCb3);
-testarAlgoritmo("CB3 - Método AG2 (Mutação Perturbação)", AG2, configCb3);
+main();
