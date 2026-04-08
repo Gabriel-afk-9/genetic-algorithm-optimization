@@ -18,7 +18,7 @@ export class GeneticAlgorithm {
         let previousBestFitness = Infinity;
 
         while (repeatedFitnessCount < this.config.maxRepetitions && generations < this.config.maxGenerations) {
-            const nextGeneration: Individual[] = [{ ...this.getBestIndividual() }]; // Elitismo
+            const nextGeneration: Individual[] = [{ ...this.getBestIndividual() }];
 
             while (nextGeneration.length < this.config.populationSize) {
                 const parent1 = this.tournamentSelection();

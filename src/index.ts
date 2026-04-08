@@ -5,7 +5,6 @@ import { RunOptimization } from "./usecases/RunOptimization";
 
 function main() {
     const runOptimization = new RunOptimization();
-
     const bf1Problem = new Bohachevsky1();
     const cb3Problem = new CamelBack3();
 
@@ -27,7 +26,6 @@ function main() {
         crossoverAlpha: 0.8,
         tournamentSize: 3,
         maxRepetitions: 5
-        // ...configBf1
     }; 
 
     const resultBf1 = runOptimization.execute(bf1Problem, configBf1);

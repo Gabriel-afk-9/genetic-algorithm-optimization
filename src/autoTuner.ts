@@ -8,7 +8,7 @@ import { MathUtils } from "./infrastructure/utils/MathUtils";
 function runAutoTuner(problem: Problem, targetNfe: number, targetSr: number) {
     const runOptimization = new RunOptimization();
     
-    console.log(`🔍 Iniciando auto testador para: ${problem.name}`);
+    console.log(`Iniciando auto testador para: ${problem.name}`);
     console.log(`Objetivo: NFE < ${targetNfe} e SR = ${targetSr}%`);
 
     let attempt = 1;
@@ -28,11 +28,11 @@ function runAutoTuner(problem: Problem, targetNfe: number, targetSr: number) {
         const resultText = runOptimization.execute(problem, randomConfig);
         
         const nfeExtracted = parseInt(resultText.split("NFE ")[1].split(" ")[0]);
-        const srExtraido = parseInt(resultText.split("SR ")[1].split("%")[0]);
+        const srExtracted = parseInt(resultText.split("SR ")[1].split("%")[0]);
 
-        console.log(`NFE: ${nfeExtracted} | SR: ${srExtraido}%`);
+        console.log(`NFE: ${nfeExtracted} | SR: ${srExtracted}%`);
 
-        if (nfeExtracted < targetNfe && srExtraido >= targetSr) {
+        if (nfeExtracted < targetNfe && srExtracted >= targetSr) {
             find = true;
             console.log("\nCONFIGURAÇÃO ENCONTRADA!");
             console.log(resultText);
@@ -48,8 +48,8 @@ function startTuning() {
     const bf1 = new Bohachevsky1();
     const cb3 = new CamelBack3();
     
-    runAutoTuner(bf1, 754, 100); 
-    // runAutoTuner(cb3, 1000, 100); 
+    // runAutoTuner(bf1, 754, 100); 
+    runAutoTuner(cb3, 163, 100); 
 }
 
 startTuning();
