@@ -4,7 +4,7 @@ Este repositório apresenta uma implementação de um Algoritmo Genético (AG) d
 
 ## Visão Geral do Projeto
 
-O objetivo principal deste trabalho é demonstrar a aplicação de Algoritmos Genéticos na resolução de problemas de otimização contínua, utilizando as funções de teste Bohachevsky 1 (BF1) e Camel Back 3 (CB3). A implementação detalha cada componente do AG, desde a representação dos indivíduos até os critérios de parada, com um foco na eficiência e na robustez da solução.
+O objetivo principal deste trabalho é demonstrar a aplicação de Algoritmos Genéticos na resolução de problemas de otimização contínua, utilizando as funções de teste `Bohachevsky 1 (BF1)` e `Camel Back 3 (CB3)` ambos em 2 dimensões. A implementação detalha cada componente do AG, desde a representação dos indivíduos até os critérios de parada.
 
 ## Funcionalidades e Características
 
@@ -22,6 +22,25 @@ O objetivo principal deste trabalho é demonstrar a aplicação de Algoritmos Ge
 
 As configurações otimizadas pelo AutoTuner demonstraram um desempenho superior em comparação com a literatura para os problemas BF1 e CB3, alcançando um Número de Avaliações de Função (NFE) significativamente menor com 100% de Taxa de Sucesso (SR). Por exemplo, para BF1, o NFE foi de 754 com SR de 100%, e para CB3, o NFE foi de 387 com SR de 100%.
 
+## Estrutura do Repositório
+```text
+└── src/
+    ├── autoTuner.ts
+    ├── domain/
+    │   ├── GAConfig.ts
+    │   ├── Individual.ts
+    │   └── Problem.ts
+    ├── infrastructure/
+    │   ├── problems/
+    │   │   ├── Bohachevsky1.ts
+    │   │   └── CamelBack3.ts
+    │   └── utils/
+    │       └── MathUtils.ts
+    ├── usecases/
+    │   ├── GeneticAlgorithm.ts
+    │   └── RunOptimization.ts
+    └── index.ts
+```
 
 ## Como Executar
 
