@@ -24,7 +24,7 @@ As configurações otimizadas pelo AutoTuner demonstraram um desempenho superior
 
 ## Estrutura do Repositório
 ```text
-└── src/
+  src/
     ├── autoTuner.ts
     ├── domain/
     │   ├── GAConfig.ts
