@@ -1,51 +1,38 @@
-import { Individual } from "../domain/Individual";
-import { Problem } from "../domain/Problem";
-import { GAConfig } from "../domain/GAConfig";
-import { MathUtils } from "../infrastructure/utils/MathUtils";
+import { createIndividual, type DecisionVariables, type Individual, withFitness } from "../domain/Individual";
+import { createOptimizationRunResult, type OptimizationRunResult } from "../domain/OptimizationResult";
+import { type RandomSource } from "../domain/RandomSource";
+import { type GAConfig } from "../domain/GAConfig";
+import { type Problem } from "../domain/Problem";
+
+const DEFAULT_OPTIMUM_TOLERANCE = 0.01;
 
 export class GeneticAlgorithm {
-    private population: Individual[] = [];
+    constructor(
+        private readonly problem: Problem,
+        private readonly config: GAConfig,
+        private readonly randomSource: RandomSource,
+        private readonly optimumTolerance: number = DEFAULT_OPTIMUM_TOLERANCE
+    ) {}
 
-    constructor(private problem: Problem, private config: GAConfig) {}
-
-    public execute(): { nfe: number; success: boolean; bestFitness: number } {
-        this.initializePopulation();
-        this.evaluatePopulation();
-        
+    public execute(): OptimizationRunResult {
+        let population = this.evaluatePopulation(this.initializePopulation());
         let nfe = this.config.populationSize;
         let generations = 0;
         let repeatedFitnessCount = 0;
         let previousBestFitness = Infinity;
 
         while (repeatedFitnessCount < this.config.maxRepetitions && generations < this.config.maxGenerations) {
-            const nextGeneration: Individual[] = [{ ...this.getBestIndividual() }];
+            const bestIndividual = this.getBestIndividual(population);
 
-            while (nextGeneration.length < this.config.populationSize) {
-                const parent1 = this.tournamentSelection();
-                const parent2 = this.tournamentSelection();
-                
-                const [child1, child2] = this.crossover(parent1, parent2);
-                
-                this.mutate(child1);
-                this.mutate(child2);
-
-                nextGeneration.push(child1);
-                if (nextGeneration.length < this.config.populationSize) {
-                    nextGeneration.push(child2);
-                }
+            if (this.hasReachedTarget(bestIndividual.fitness)) {
+                break;
             }
 
-            this.population = nextGeneration;
-            this.evaluatePopulation();
-            
+            population = this.evaluatePopulation(this.createNextGeneration(population, bestIndividual));
             nfe += this.config.populationSize;
             generations++;
 
-            const currentBestFitness = this.getBestIndividual().fitness;
-            
-            if (MathUtils.isWithinTolerance(currentBestFitness, this.problem.optimumTarget)) {
-                break; 
-            }
+            const currentBestFitness = this.getBestIndividual(population).fitness;
 
             if (currentBestFitness === previousBestFitness) {
                 repeatedFitnessCount++;
@@ -56,64 +43,122 @@ export class GeneticAlgorithm {
             previousBestFitness = currentBestFitness;
         }
 
-        const bestIndividual = this.getBestIndividual();
-        const isSuccess = MathUtils.isWithinTolerance(bestIndividual.fitness, this.problem.optimumTarget);
-        
-        return { nfe, success: isSuccess, bestFitness: bestIndividual.fitness };
+        const bestIndividual = this.getBestIndividual(population);
+
+        return createOptimizationRunResult({
+            nfe,
+            success: this.hasReachedTarget(bestIndividual.fitness),
+            bestFitness: bestIndividual.fitness
+        });
     }
 
-    private initializePopulation(): void {
-        this.population = [];
-        for (let i = 0; i < this.config.populationSize; i++) {
-            this.population.push({
-                x1: MathUtils.generateRandomNumber(this.problem.minBound, this.problem.maxBound),
-                x2: MathUtils.generateRandomNumber(this.problem.minBound, this.problem.maxBound),
-                fitness: 0
-            });
-        }
+    private initializePopulation(): Individual[] {
+        return Array.from(
+            { length: this.config.populationSize },
+            () => createIndividual(this.randomDecisionVariables())
+        );
     }
 
-    private evaluatePopulation(): void {
-        for (const ind of this.population) {
-            ind.fitness = this.problem.calculateFitness(ind.x1, ind.x2);
-        }
+    private evaluatePopulation(population: readonly Individual[]): Individual[] {
+        return population.map((individual) =>
+            withFitness(
+                individual,
+                this.problem.calculateFitness(individual.x1, individual.x2)
+            )
+        );
     }
 
-    private getBestIndividual(): Individual {
-        return this.population.reduce((best, curr) => curr.fitness < best.fitness ? curr : best);
-    }
+    private createNextGeneration(
+        population: readonly Individual[],
+        bestIndividual: Individual
+    ): Individual[] {
+        const nextGeneration: Individual[] = [bestIndividual];
 
-    private tournamentSelection(): Individual {
-        let best: Individual | null = null;
-        for (let i = 0; i < this.config.tournamentSize; i++) {
-            const ind = this.population[Math.floor(Math.random() * this.population.length)];
-            if (!best || ind.fitness < best.fitness) {
-                best = ind;
+        while (nextGeneration.length < this.config.populationSize) {
+            const parent1 = this.tournamentSelection(population);
+            const parent2 = this.tournamentSelection(population);
+            const [firstChild, secondChild] = this.crossover(parent1, parent2);
+
+            nextGeneration.push(this.mutate(firstChild));
+
+            if (nextGeneration.length < this.config.populationSize) {
+                nextGeneration.push(this.mutate(secondChild));
             }
         }
-        return { ...best! };
+
+        return nextGeneration;
+    }
+
+    private getBestIndividual(population: readonly Individual[]): Individual {
+        return population.reduce((best, current) =>
+            current.fitness < best.fitness ? current : best
+        );
+    }
+
+    private tournamentSelection(population: readonly Individual[]): Individual {
+        let best: Individual | null = null;
+
+        for (let i = 0; i < this.config.tournamentSize; i++) {
+            const candidate = population[this.randomSource.nextIndex(population.length)];
+
+            if (!best || candidate.fitness < best.fitness) {
+                best = candidate;
+            }
+        }
+
+        return best!;
     }
 
     private crossover(parent1: Individual, parent2: Individual): [Individual, Individual] {
-        const child1 = { ...parent1 };
-        const child2 = { ...parent2 };
-
-        if (Math.random() < this.config.crossoverRate) {
-            child1.x1 = (parent1.x1 * this.config.crossoverAlpha) + (parent2.x1 * (1 - this.config.crossoverAlpha));
-            child1.x2 = (parent1.x2 * this.config.crossoverAlpha) + (parent2.x2 * (1 - this.config.crossoverAlpha));
-            child2.x1 = (parent2.x1 * this.config.crossoverAlpha) + (parent1.x1 * (1 - this.config.crossoverAlpha));
-            child2.x2 = (parent2.x2 * this.config.crossoverAlpha) + (parent1.x2 * (1 - this.config.crossoverAlpha));
+        if (this.randomSource.nextProbability() >= this.config.crossoverRate) {
+            return [
+                createIndividual(parent1, parent1.fitness),
+                createIndividual(parent2, parent2.fitness)
+            ];
         }
 
-        return [child1, child2];
+        const blendFactor = this.randomSource.nextProbability();
+
+        return [
+            createIndividual(this.blendDecisionVariables(parent1, parent2, blendFactor)),
+            createIndividual(this.blendDecisionVariables(parent2, parent1, blendFactor))
+        ];
     }
 
-    private mutate(individual: Individual): void {
-        if (Math.random() < this.config.mutationRate) {
-            individual.x1 = MathUtils.generateRandomNumber(this.problem.minBound, this.problem.maxBound);
-        }
-        if (Math.random() < this.config.mutationRate) {
-            individual.x2 = MathUtils.generateRandomNumber(this.problem.minBound, this.problem.maxBound);
-        }
+    private mutate(individual: Individual): Individual {
+        const x1 = this.shouldMutate()
+            ? this.randomSource.nextBetween(this.problem.minBound, this.problem.maxBound)
+            : individual.x1;
+        const x2 = this.shouldMutate()
+            ? this.randomSource.nextBetween(this.problem.minBound, this.problem.maxBound)
+            : individual.x2;
+
+        return createIndividual({ x1, x2 });
+    }
+
+    private blendDecisionVariables(
+        primaryParent: DecisionVariables,
+        secondaryParent: DecisionVariables,
+        blendFactor: number
+    ): DecisionVariables {
+        return {
+            x1: (primaryParent.x1 * blendFactor) + (secondaryParent.x1 * (1 - blendFactor)),
+            x2: (primaryParent.x2 * blendFactor) + (secondaryParent.x2 * (1 - blendFactor))
+        };
+    }
+
+    private randomDecisionVariables(): DecisionVariables {
+        return {
+            x1: this.randomSource.nextBetween(this.problem.minBound, this.problem.maxBound),
+            x2: this.randomSource.nextBetween(this.problem.minBound, this.problem.maxBound)
+        };
+    }
+
+    private shouldMutate(): boolean {
+        return this.randomSource.nextProbability() < this.config.mutationRate;
+    }
+
+    private hasReachedTarget(fitness: number): boolean {
+        return Math.abs(fitness - this.problem.optimumTarget) <= this.optimumTolerance;
     }
 }

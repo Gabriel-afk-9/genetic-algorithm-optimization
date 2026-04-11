@@ -1,32 +1,44 @@
-import { Problem } from "../domain/Problem";
-import { GAConfig } from "../domain/GAConfig";
+import { assertPositiveInteger } from "../domain/DomainPrimitives";
+import { type GAConfig } from "../domain/GAConfig";
+import { createOptimizationSummary, type OptimizationSummary } from "../domain/OptimizationResult";
+import { type Problem } from "../domain/Problem";
+import { type RandomSource } from "../domain/RandomSource";
 import { GeneticAlgorithm } from "./GeneticAlgorithm";
 
 export class RunOptimization {
-    private readonly TOTAL_RUNS = 100;
+    constructor(
+        private readonly randomSource: RandomSource,
+        private readonly totalRuns: number = 100
+    ) {
+        assertPositiveInteger(totalRuns, "totalRuns");
+    }
 
-    public execute(problem: Problem, config: GAConfig): string {
+    public execute(problem: Problem, config: GAConfig): OptimizationSummary {
         let totalNfe = 0;
         let successCount = 0;
         let absoluteBestFitness = Infinity;
 
-        for (let i = 0; i < this.TOTAL_RUNS; i++) {
-            const algorithm = new GeneticAlgorithm(problem, config);
+        for (let i = 0; i < this.totalRuns; i++) {
+            const algorithm = new GeneticAlgorithm(problem, config, this.randomSource);
             const result = algorithm.execute();
-            
             totalNfe += result.nfe;
-            
+
             if (result.bestFitness < absoluteBestFitness) {
                 absoluteBestFitness = result.bestFitness;
             }
+
             if (result.success) {
                 successCount++;
             }
         }
 
-        const averageNfe = Math.round(totalNfe / this.TOTAL_RUNS);
-        const successRate = Math.round((successCount / this.TOTAL_RUNS) * 100);
-
-        return `${problem.name} NFE ${averageNfe} SR ${successRate}% | Melhor Fitness Encontrado: ${absoluteBestFitness.toFixed(5)}`;
+        return createOptimizationSummary({
+            problemName: problem.name,
+            totalRuns: this.totalRuns,
+            successfulRuns: successCount,
+            successRate: successCount / this.totalRuns,
+            averageNfe: Math.round(totalNfe / this.totalRuns),
+            bestFitness: absoluteBestFitness
+        });
     }
 }
